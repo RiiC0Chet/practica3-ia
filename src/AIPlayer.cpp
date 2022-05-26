@@ -21,8 +21,32 @@ bool AIPlayer::move(){
     return true;
 }
 
-void AIPlayer::think(color & c_piece, int & id_piece, int & dice) const{
-    // IMPLEMENTACIÓN INICIAL DEL AGENTE
+void AIPlayer::think(color & c_piece, int & id_piece, int & dice) const
+{
+    switch(id)
+    {
+        case 0:
+            thinkAleatorio(c_piece,id_piece,dice);
+        break;
+
+        case 1:
+            thinkAleatorioMasInteligente(c_piece,id_piece,dice);
+        break;
+            
+        case 2:
+            thinkFichaMasAdelantada(c_piece,id_piece,dice);
+        break;
+
+        case 3:
+            thinkMejorOpcion(c_piece,id_piece,dice);
+        break;
+    }
+}
+
+
+void AIPlayer::thinkAleatorio(color & c_piece, int & id_piece, int & dice) const
+{
+        // IMPLEMENTACIÓN INICIAL DEL AGENTE
     // Esta implementación realiza un movimiento aleatorio.
     // Se proporciona como ejemplo, pero se debe cambiar por una que realice un movimiento inteligente 
     //como lo que se muestran al final de la función.
@@ -84,6 +108,116 @@ void AIPlayer::think(color & c_piece, int & id_piece, int & dice) const{
     cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
 
     */
+}
+
+
+void AIPlayer::thinkAleatorioMasInteligente(color & c_piece,int & id_piece,int & dice)const
+{
+    // El color de ficha que se vaamover.
+    c_piece = actual->getCurrentColor();
+    // Vector que almacenará los dados que se pueden usar para el movimiento.
+    vector<int>current_dices;
+    // Vector que almacenará los ids de las fichas que se pueden mover para el dado elegido.
+    vector<int>current_pieces;
+    // Se obtiene el vector de dados que se pueden usar para el movimiento.
+    current_dices = actual->getAvailableDices(c_piece);
+    // En vez de elegir un dado al azar,miro primero cuáles tienen fichas que se puedan mover.
+    vector<int>current_dices_que_pueden_mover_ficha;
+
+    for(int i=0;i<current_dices.size();i++)
+    {
+        // Se obtiene el vector de fichas que se pueden mover para el dado elegido.
+        current_pieces=actual->getAvailablePieces(c_piece,current_dices[i]);
+        // Si se pueden mover fichas para el dado actual,lo añado al vector de dados que pueden mover fichas.
+        if(current_pieces.size()>0)
+        {
+            current_dices_que_pueden_mover_ficha.push_back(current_dices[i]);
+        }
+    }
+
+    // Si no tengo ninun dado que pueda mover fichas,paso turno con un dado al azar(la macro SKIP TURN me permite no mover).
+    if(current_dices_que_pueden_mover_ficha.size()==0)
+    {
+        dice=current_dices[rand() % current_dices.size()];
+        id_piece=SKIP_TURN;
+    }
+    // En caso contrario,elijo un dado de forma aleatoria de entre los que pueden mover ficha.
+    else
+    {
+        dice=current_dices_que_pueden_mover_ficha[rand() % current_dices_que_pueden_mover_ficha.size()];
+        // Se obtiene el vector de fichas que se pueden mover para el dado elegido.
+        current_pieces=actual->getAvailablePieces(c_piece,dice);
+        // Muevo una ficha al azar de entre las que se pueden mover.
+        id_piece = current_pieces[rand() % current_pieces.size()];
+    }
+
+}
+
+
+
+void AIPlayer::thinkFichaMasAdelantada(color & c_piece,int & id_piece,int&dice)const
+{
+   // Elijo el dado haciendo lo mismo que el jugador anterior.
+    thinkAleatorioMasInteligente(c_piece,id_piece,dice);
+   // Tras llamaraesta función,ya tengo en dice el número de dado que quiero usar.
+   // Ahora,en vez de mover una ficha al azar,voyamover la que esté más adelantada
+    //(equivalentemente,la más cercanaala meta).
+    vector<int>current_pieces = actual->getAvailablePieces(c_piece,dice);
+
+    int id_ficha_mas_adelantada=-1;
+    int min_distancia_meta=9999;
+
+    for(int i=0;i<current_pieces.size();i++)
+    {
+       // distanceToGoal(color,id)devuelve la distanciaala meta de la ficha[id]del color que le indique.
+        int distancia_meta=actual->distanceToGoal(c_piece,current_pieces[i]);
+
+        if(distancia_meta<min_distancia_meta)
+        {
+            min_distancia_meta = distancia_meta;
+            id_ficha_mas_adelantada = current_pieces[i];
+        }
+    }
+    // Si no he encontrado ninguna ficha,paso turno.
+    if(id_ficha_mas_adelantada == -1)
+    {
+        id_piece=SKIP_TURN;
+    }
+   // En caso contrario,moveré la ficha más adelantada.
+    else
+    {
+        id_piece=id_ficha_mas_adelantada;
+    }
+}
+
+
+void AIPlayer::thinkMejorOpcion(color & c_piece,int & id_piece,int&dice)const
+{
+    color last_c_piece = none;
+    int last_id_piece = -1; 
+    int last_dice = -1;
+
+    Parchis siguiente_hijo = actual->generateNextMove(last_c_piece,last_id_piece,last_dice);
+
+    bool me_quedo_con_esta_accion = false;
+
+    while(!(siguiente_hijo == *actual) && !me_quedo_con_esta_accion)
+    {
+        if(siguiente_hijo.isEatingMove() || siguiente_hijo.isGoalMove() || (siguiente_hijo.gameOver() && siguiente_hijo.getWinner() == this->jugador))
+            me_quedo_con_esta_accion = true;
+        else
+            siguiente_hijo = actual->generateNextMove(last_c_piece,last_id_piece,last_dice);
+    }
+
+    if(me_quedo_con_esta_accion)
+    {
+        c_piece = last_c_piece; 
+        id_piece = last_id_piece;
+        dice = last_dice;
+    }
+    else
+        thinkAleatorioMasInteligente(c_piece,id_piece,dice);
+
 }
 
 
