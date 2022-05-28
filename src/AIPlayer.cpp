@@ -23,6 +23,7 @@ bool AIPlayer::move(){
 
 void AIPlayer::think(color & c_piece, int & id_piece, int & dice) const
 {
+    /*
     switch(id)
     {
         case 0:
@@ -41,6 +42,37 @@ void AIPlayer::think(color & c_piece, int & id_piece, int & dice) const
             thinkMejorOpcion(c_piece,id_piece,dice);
         break;
     }
+    */
+        
+    // El siguiente código se proporciona como sugerencia para iniciar la implementación del agente.
+
+    double valor; // Almacena el valor con el que se etiqueta el estado tras el proceso de busqueda.
+    double alpha = menosinf, beta = masinf; // Cotas iniciales de la poda AlfaBeta
+    // Llamada a la función para la poda (los parámetros son solo una sugerencia, se pueden modificar).
+    //valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, ValoracionTest);
+    //cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
+
+    // ----------------------------------------------------------------- //
+
+    // Si quiero poder manejar varias heurísticas, puedo usar la variable id del agente para usar una u otra.
+    int profundidad = 0;
+    switch(id)
+    {
+        case 0:    
+            valor = Poda_AlfaBeta(*actual, jugador, profundidad, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, ValoracionTest);
+            cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
+            break;
+        case 1:
+            thinkMejorOpcion(c_piece,id_piece,dice);
+            //valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, MiValoracion1);
+            break;
+        case 2:
+            //valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, MiValoracion2);
+            break;
+    }
+    //cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
+
+    
 }
 
 
@@ -82,32 +114,6 @@ void AIPlayer::thinkAleatorio(color & c_piece, int & id_piece, int & dice) const
         id_piece = SKIP_TURN;
     }
 
-    /*
-    // El siguiente código se proporciona como sugerencia para iniciar la implementación del agente.
-
-    double valor; // Almacena el valor con el que se etiqueta el estado tras el proceso de busqueda.
-    double alpha = menosinf, beta = masinf; // Cotas iniciales de la poda AlfaBeta
-    // Llamada a la función para la poda (los parámetros son solo una sugerencia, se pueden modificar).
-    valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, ValoracionTest);
-    cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
-
-    // ----------------------------------------------------------------- //
-
-    // Si quiero poder manejar varias heurísticas, puedo usar la variable id del agente para usar una u otra.
-    switch(id){
-        case 0:
-            valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, ValoracionTest);
-            break;
-        case 1:
-            valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, MiValoracion1);
-            break;
-        case 2:
-            valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, MiValoracion2);
-            break;
-    }
-    cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
-
-    */
 }
 
 
@@ -292,3 +298,76 @@ double AIPlayer::ValoracionTest(const Parchis &estado, int jugador)
     }
 }
 
+double AIPlayer::Poda_AlfaBeta(const Parchis & hijo, int jugador, int  profundidad, const int PROFUNDIDAD,
+                                color & c_piece, int & id_piece, int &dice, double alpha, double beta, 
+                                double (*ptr_func)(const Parchis &, int)) const
+{
+    if(hijo.gameOver() || profundidad == PROFUNDIDAD)
+        return ptr_func(hijo,jugador); // La victoria y la derrota se han dividido, volver a la valoración
+    
+		 
+
+    color last_c_piece = none;
+    int last_id_piece = -1; 
+    int last_dice = -1;
+    
+    Parchis siguiente_hijo = hijo.generateNextMoveDescending(last_c_piece,last_id_piece,last_dice);
+	 if (actual->getCurrentPlayerId() != hijo.getCurrentPlayerId()) // juzga el tipo de nodo 
+	 {// nodo mínimo
+        cout<<"Entramos en nodo minimo de profundidad :"<< profundidad<<endl;
+		while(!(siguiente_hijo == hijo))
+		{
+            cout<<"Para el hijo generado  tenemos un color :"<<last_c_piece<<" id de pieza"<<last_id_piece<<" dado "<<last_dice<<endl;
+		    double valor = Poda_AlfaBeta (siguiente_hijo,jugador,profundidad+1,PROFUNDIDAD,last_c_piece,last_id_piece,last_dice,alpha,beta,ptr_func); // Búsqueda recursiva de nodos secundarios
+
+            cout<<"****************************************************************************************** "<<alpha<<" "<<beta<<" "<<valor<<endl;
+
+            if(valor<beta)
+			{
+				beta = valor; // El valor mínimo
+
+                //beta = min(valor,beta);
+
+                if(profundidad == 0)
+                {
+                    c_piece = last_c_piece;
+                    id_piece = last_id_piece;
+                    dice = last_dice;
+                }
+                
+			}
+                if(alpha>=beta)
+					break;// Poda alfa, descarte el nodo sucesor 
+
+            siguiente_hijo = hijo.generateNextMoveDescending(last_c_piece,last_id_piece,last_dice);
+			
+		}
+		 return beta; // Devuelve el valor mínimo 
+	}
+	else
+	 {// El nodo con el valor máximo 
+        cout<<"Entramos en nodo maximo de profundidad :"<< profundidad<<endl;
+		while(!(siguiente_hijo == hijo))
+		{
+			 //siguiente_hijo = hijo.generateNextMoveDescending(last_c_piece,last_id_piece,last_dice); // Genera un nuevo nodo
+			 double valor = Poda_AlfaBeta (siguiente_hijo,jugador,profundidad+1,PROFUNDIDAD,last_c_piece,last_id_piece,last_dice,alpha,beta,ptr_func); // Búsqueda recursiva de nodos secundarios
+			cout<<"****************************************************************************************** "<<alpha<<" "<<beta<<" "<<valor<<endl;
+            if(valor>alpha)
+			{
+				 alpha = valor; // El valor mínimo
+                 
+                if(profundidad == 0)
+                {
+                    c_piece = last_c_piece;
+                    id_piece = last_id_piece;
+                    dice = last_dice;
+                }
+			} 
+            if(alpha>=beta)
+					 break;// poda nBeta, descarta el nodo sucesor 
+            siguiente_hijo = hijo.generateNextMoveDescending(last_c_piece,last_id_piece,last_dice);
+
+		}
+		 return alpha; // Devuelve el valor mínimo 
+	} 
+}
