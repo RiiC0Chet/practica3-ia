@@ -63,11 +63,12 @@ void AIPlayer::think(color & c_piece, int & id_piece, int & dice) const
             cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
             break;
         case 1:
-            thinkMejorOpcion(c_piece,id_piece,dice);
-            //valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, MiValoracion1);
+            valor = Poda_AlfaBeta(*actual, jugador, profundidad, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, Heuristica_UNO);
+            cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
             break;
         case 2:
-            //valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, MiValoracion2);
+            valor = Poda_AlfaBeta(*actual, jugador, profundidad, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, Heuristica_DOS);
+            cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
             break;
     }
     //cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
@@ -226,6 +227,272 @@ void AIPlayer::thinkMejorOpcion(color & c_piece,int & id_piece,int&dice)const
 
 }
 
+// En esta primera heuristica distinguimos para cada jugador cual de los dos colores va con ventaja
+// para poder aproevecharlo, se contabilizaran como puntos estar en el goal, en la recta final y no 
+// se puntuara extra si hay fichas en casa (de la misma forma se puntua al oponente)
+double AIPlayer::Heuristica_UNO(const Parchis &estado, int jugador)
+{
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------
+    int ganador = estado.getWinner();
+    int oponente = (jugador + 1) % 2;
+
+    // Si hay un ganador, devuelvo más/menos infinito, según si he ganado yo o el oponente.
+    if (ganador == jugador)
+    {
+        return gana;
+    }
+    else if (ganador == oponente)
+    {
+        return pierde;
+    }
+    else
+    {
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------
+        // Puntuaciones asignadas a cada jugador en este estado del juego
+        int puntuacion_jugador = 0;
+        int puntuacion_oponente = 0;
+
+//----------------------------------------Aqui vamos a asignar que color va ganando por cada jugador---------------------------------------------
+
+        // Colores que juega mi jugador y colores del oponente
+        vector<pair<color,int>> my_colors; 
+            // añadimos los colores del jugador, con el valor inicial que es 0 (que sera el total de casillas que les queda por recorrer para ganar)
+            my_colors.push_back(make_pair(estado.getPlayerColors(jugador).at(0),0));
+            my_colors.push_back(make_pair(estado.getPlayerColors(jugador).at(1),0));
+
+        // Colores que juega mi jugador y colores del oponente
+        vector<pair<color,int>> op_colors; 
+            // añadimos los colores del jugador, con el valor inicial que es 0
+            op_colors.push_back(make_pair(estado.getPlayerColors(oponente).at(0),0));
+            op_colors.push_back(make_pair(estado.getPlayerColors(oponente).at(1),0));
+
+        // colores auxiliares para poder medir que color va ganando para cada jugador
+        color color_ganador_jugador,
+                color_perdedor_jugador,
+              color_ganador_oponente,
+                color_perdedor_oponente;
+
+        // Calculamos cual de los dos colores de cada  jugador y oponente va ganando 
+        // Para ello vamos a calcular los puntos de cada color por jugador
+
+        for (int i = 0; i < my_colors.size(); i++)
+        {
+            color c = my_colors[i].first;
+            color c_op = op_colors[i].first;
+
+            for (int j = 0; j < num_pieces; j++)
+            {
+                my_colors[i].second += estado.distanceToGoal(c,j);
+                op_colors[i].second += estado.distanceToGoal(c_op,j);
+            }
+
+                
+        }
+
+        // si se cumple es porque el colo 0 es va mejor en la partida que el 1
+        if( my_colors[0].second <  my_colors[1].second)
+        {// Para jugador
+            color_ganador_jugador = my_colors[0].first;
+            color_perdedor_jugador = my_colors[1].first; 
+        }
+        else
+        {
+            color_ganador_jugador = my_colors[1].first;
+            color_perdedor_jugador = my_colors[0].first; 
+        }
+            
+        if( op_colors[0].second <  op_colors[1].second)
+        {// Para oponente
+            color_ganador_oponente = op_colors[0].first;
+            color_perdedor_oponente = op_colors[1].first; 
+        }
+        else
+        {
+            color_ganador_oponente = op_colors[1].first;
+            color_perdedor_oponente = op_colors[0].first; 
+        }
+//-----------------------------------------------Contabilizamos los puntos para el color del jugador color ganador----------------------------------------------------------
+
+    
+        for(int p = 0;p<num_pieces;p++)
+        {
+            if(estado.getBoard().getPiece(color_ganador_jugador, p).type == goal)
+                puntuacion_jugador+=12;
+            else if(estado.getBoard().getPiece(color_ganador_jugador, p).type == final_queue)
+                puntuacion_jugador+=8;
+            else if (estado.getBoard().getPiece(color_ganador_jugador, p).type != home)
+                puntuacion_jugador+=5;
+        }
+
+        if(estado.eatenPiece().first == color_ganador_oponente)
+            puntuacion_jugador+=9;
+        
+        if(estado.eatenPiece().first == color_perdedor_oponente)
+            puntuacion_jugador+=6;
+
+//-----------------------------------------------Contabilizamos los puntos para el color del jugador color perdedor----------------------------------------------------------
+
+//-----------------------------------------------Contabilizamos los puntos para el color del oponente color ganador----------------------------------------------------------
+
+        for(int p = 0;p<num_pieces;p++)
+        {
+            if(estado.getBoard().getPiece(color_ganador_oponente, p).type == goal)
+                puntuacion_oponente+=12;
+            else if(estado.getBoard().getPiece(color_ganador_oponente, p).type == final_queue)
+                puntuacion_oponente+=8;
+            else if (estado.getBoard().getPiece(color_ganador_oponente, p).type != home)
+                puntuacion_oponente+=5;
+        }
+
+        if(estado.eatenPiece().first == color_ganador_jugador)
+            puntuacion_oponente+=9;
+        
+        if(estado.eatenPiece().first == color_perdedor_jugador)
+            puntuacion_oponente+=6;
+//-----------------------------------------------Contabilizamos los puntos para el color del oponente color perdedor----------------------------------------------------------
+        
+        // Devuelvo la puntuación de mi jugador menos la puntuación del oponente.
+        return puntuacion_jugador - puntuacion_oponente;
+    }
+}
+
+// Con esta nueva heurisitica ademas de comprobar lo de la primera 
+// estamos teniendo en cuenta la distancia al final cada vez mas chica lo cual se premia
+double AIPlayer::Heuristica_DOS(const Parchis &estado, int jugador)
+{
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------
+    int ganador = estado.getWinner();
+    int oponente = (jugador + 1) % 2;
+
+    // Si hay un ganador, devuelvo más/menos infinito, según si he ganado yo o el oponente.
+    if (ganador == jugador)
+    {
+        return gana;
+    }
+    else if (ganador == oponente)
+    {
+        return pierde;
+    }
+    else
+    {
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------
+        // Puntuaciones asignadas a cada jugador en este estado del juego
+        double puntuacion_jugador = 0;
+        double puntuacion_oponente = 0;
+
+//----------------------------------------Aqui vamos a asignar que color va ganando por cada jugador---------------------------------------------
+
+        // Colores que juega mi jugador y colores del oponente
+        vector<pair<color,int>> my_colors; 
+            // añadimos los colores del jugador, con el valor inicial que es 0 (que sera el total de casillas que les queda por recorrer para ganar)
+            my_colors.push_back(make_pair(estado.getPlayerColors(jugador).at(0),0));
+            my_colors.push_back(make_pair(estado.getPlayerColors(jugador).at(1),0));
+
+        // Colores que juega mi jugador y colores del oponente
+        vector<pair<color,int>> op_colors; 
+            // añadimos los colores del jugador, con el valor inicial que es 0
+            op_colors.push_back(make_pair(estado.getPlayerColors(oponente).at(0),0));
+            op_colors.push_back(make_pair(estado.getPlayerColors(oponente).at(1),0));
+
+        // colores auxiliares para poder medir que color va ganando para cada jugador
+        color color_ganador_jugador,
+                color_perdedor_jugador,
+              color_ganador_oponente,
+                color_perdedor_oponente;
+
+        // Calculamos cual de los dos colores de cada  jugador y oponente va ganando 
+        // Para ello vamos a calcular los puntos de cada color por jugador
+
+        for (int i = 0; i < my_colors.size(); i++)
+        {
+            color c = my_colors[i].first;
+            color c_op = op_colors[i].first;
+
+            for (int j = 0; j < num_pieces; j++)
+            {
+                my_colors[i].second += estado.distanceToGoal(c,j);
+                op_colors[i].second += estado.distanceToGoal(c_op,j);
+            }
+
+                
+        }
+
+        // si se cumple es porque el colo 0 es va mejor en la partida que el 1
+        if( my_colors[0].second <  my_colors[1].second)
+        {// Para jugador
+            color_ganador_jugador = my_colors[0].first;
+            color_perdedor_jugador = my_colors[1].first; 
+        }
+        else
+        {
+            color_ganador_jugador = my_colors[1].first;
+            color_perdedor_jugador = my_colors[0].first; 
+        }
+            
+        if( op_colors[0].second <  op_colors[1].second)
+        {// Para oponente
+            color_ganador_oponente = op_colors[0].first;
+            color_perdedor_oponente = op_colors[1].first; 
+        }
+        else
+        {
+            color_ganador_oponente = op_colors[1].first;
+            color_perdedor_oponente = op_colors[0].first; 
+        }
+//-----------------------------------------------Contabilizamos los puntos para el color del jugador color ganador----------------------------------------------------------
+
+    
+        for(int p = 0;p<num_pieces;p++)
+        {
+            if(estado.getBoard().getPiece(color_ganador_jugador, p).type == goal)
+                puntuacion_jugador+=12;
+            else if(estado.getBoard().getPiece(color_ganador_jugador, p).type == final_queue)
+                puntuacion_jugador+=8;
+            else if (estado.getBoard().getPiece(color_ganador_jugador, p).type != home)
+                puntuacion_jugador+=5;
+            
+            puntuacion_jugador+= (71-estado.distanceToGoal(color_ganador_jugador, p)) /5;
+        }
+
+        if(estado.eatenPiece().first == color_ganador_oponente)
+            puntuacion_jugador+=11;
+        
+        if(estado.eatenPiece().first == color_perdedor_oponente)
+            puntuacion_jugador+=6;
+
+//-----------------------------------------------Contabilizamos los puntos para el color del jugador color perdedor----------------------------------------------------------
+
+//-----------------------------------------------Contabilizamos los puntos para el color del oponente color ganador----------------------------------------------------------
+
+        for(int p = 0;p<num_pieces;p++)
+        {
+            if(estado.getBoard().getPiece(color_ganador_oponente, p).type == goal)
+                puntuacion_oponente+=12;
+            else if(estado.getBoard().getPiece(color_ganador_oponente, p).type == final_queue)
+                puntuacion_oponente+=8;
+            else if (estado.getBoard().getPiece(color_ganador_oponente, p).type != home)
+                puntuacion_oponente+=5;
+
+            puntuacion_oponente+= (71-estado.distanceToGoal(color_ganador_oponente, p)) /5;
+        }
+
+        if(estado.eatenPiece().first == color_ganador_jugador)
+            puntuacion_oponente+=11;
+        
+        if(estado.eatenPiece().first == color_perdedor_jugador)
+            puntuacion_oponente+=6;
+//-----------------------------------------------Contabilizamos los puntos para el color del oponente color perdedor----------------------------------------------------------
+       
+        // Devuelvo la puntuación de mi jugador menos la puntuación del oponente.
+        return puntuacion_jugador - puntuacion_oponente;
+    }
+}
+
+
 
 
 double AIPlayer::ValoracionTest(const Parchis &estado, int jugador)
@@ -314,13 +581,13 @@ double AIPlayer::Poda_AlfaBeta(const Parchis & hijo, int jugador, int  profundid
     Parchis siguiente_hijo = hijo.generateNextMoveDescending(last_c_piece,last_id_piece,last_dice);
 	 if (actual->getCurrentPlayerId() != hijo.getCurrentPlayerId()) // juzga el tipo de nodo 
 	 {// nodo mínimo
-        cout<<"Entramos en nodo minimo de profundidad :"<< profundidad<<endl;
+        //cout<<"Entramos en nodo minimo de profundidad :"<< profundidad<<endl;
 		while(!(siguiente_hijo == hijo))
 		{
-            cout<<"Para el hijo generado  tenemos un color :"<<last_c_piece<<" id de pieza"<<last_id_piece<<" dado "<<last_dice<<endl;
+          //  cout<<"Para el hijo generado  tenemos un color :"<<last_c_piece<<" id de pieza"<<last_id_piece<<" dado "<<last_dice<<endl;
 		    double valor = Poda_AlfaBeta (siguiente_hijo,jugador,profundidad+1,PROFUNDIDAD,last_c_piece,last_id_piece,last_dice,alpha,beta,ptr_func); // Búsqueda recursiva de nodos secundarios
 
-            cout<<"****************************************************************************************** "<<alpha<<" "<<beta<<" "<<valor<<endl;
+            //cout<<"****************************************************************************************** "<<alpha<<" "<<beta<<" "<<valor<<endl;
 
             if(valor<beta)
 			{
@@ -346,12 +613,12 @@ double AIPlayer::Poda_AlfaBeta(const Parchis & hijo, int jugador, int  profundid
 	}
 	else
 	 {// El nodo con el valor máximo 
-        cout<<"Entramos en nodo maximo de profundidad :"<< profundidad<<endl;
+        //cout<<"Entramos en nodo maximo de profundidad :"<< profundidad<<endl;
 		while(!(siguiente_hijo == hijo))
 		{
 			 //siguiente_hijo = hijo.generateNextMoveDescending(last_c_piece,last_id_piece,last_dice); // Genera un nuevo nodo
-			 double valor = Poda_AlfaBeta (siguiente_hijo,jugador,profundidad+1,PROFUNDIDAD,last_c_piece,last_id_piece,last_dice,alpha,beta,ptr_func); // Búsqueda recursiva de nodos secundarios
-			cout<<"****************************************************************************************** "<<alpha<<" "<<beta<<" "<<valor<<endl;
+			double valor = Poda_AlfaBeta (siguiente_hijo,jugador,profundidad+1,PROFUNDIDAD,last_c_piece,last_id_piece,last_dice,alpha,beta,ptr_func); // Búsqueda recursiva de nodos secundarios
+			//cout<<"****************************************************************************************** "<<alpha<<" "<<beta<<" "<<valor<<endl;
             if(valor>alpha)
 			{
 				 alpha = valor; // El valor mínimo
