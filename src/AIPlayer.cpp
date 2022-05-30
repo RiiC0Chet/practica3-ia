@@ -70,6 +70,14 @@ void AIPlayer::think(color & c_piece, int & id_piece, int & dice) const
             valor = Poda_AlfaBeta(*actual, jugador, profundidad, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, Heuristica_DOS);
             cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
             break;
+        case 3:
+            valor = Poda_AlfaBeta(*actual, jugador, profundidad, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, Heuristica_TRES);
+            cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
+            break;
+        case 4:
+            valor = Poda_AlfaBeta(*actual, jugador, profundidad, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, Heuristica_CUATRO);
+            cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
+            break;
     }
     //cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
 
@@ -491,6 +499,389 @@ double AIPlayer::Heuristica_DOS(const Parchis &estado, int jugador)
         return puntuacion_jugador - puntuacion_oponente;
     }
 }
+
+
+// Con esta nueva heurisitica ademas de comprobar lo de la segunda 
+// estamos teniendo en cuenta si somos amenazados por otras fichas 
+// o si amenazamos a otras fichas del color contrario
+double AIPlayer::Heuristica_TRES(const Parchis &estado, int jugador)
+{
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------
+    int ganador = estado.getWinner();
+    int oponente = (jugador + 1) % 2;
+
+    // Si hay un ganador, devuelvo más/menos infinito, según si he ganado yo o el oponente.
+    if (ganador == jugador)
+    {
+        return gana;
+    }
+    else if (ganador == oponente)
+    {
+        return pierde;
+    }
+    else
+    {
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------
+        // Puntuaciones asignadas a cada jugador en este estado del juego
+        double puntuacion_jugador = 0;
+        double puntuacion_oponente = 0;
+
+//----------------------------------------Aqui vamos a asignar que color va ganando por cada jugador---------------------------------------------
+
+        // Colores que juega mi jugador y colores del oponente
+        vector<pair<color,int>> my_colors; 
+            // añadimos los colores del jugador, con el valor inicial que es 0 (que sera el total de casillas que les queda por recorrer para ganar)
+            my_colors.push_back(make_pair(estado.getPlayerColors(jugador).at(0),0));
+            my_colors.push_back(make_pair(estado.getPlayerColors(jugador).at(1),0));
+
+        // Colores que juega mi jugador y colores del oponente
+        vector<pair<color,int>> op_colors; 
+            // añadimos los colores del jugador, con el valor inicial que es 0
+            op_colors.push_back(make_pair(estado.getPlayerColors(oponente).at(0),0));
+            op_colors.push_back(make_pair(estado.getPlayerColors(oponente).at(1),0));
+
+        // colores auxiliares para poder medir que color va ganando para cada jugador
+        color color_ganador_jugador,
+                color_perdedor_jugador,
+              color_ganador_oponente,
+                color_perdedor_oponente;
+
+        // Calculamos cual de los dos colores de cada  jugador y oponente va ganando 
+        // Para ello vamos a calcular los puntos de cada color por jugador
+
+        for (int i = 0; i < my_colors.size(); i++)
+        {
+            color c = my_colors[i].first;
+            color c_op = op_colors[i].first;
+
+            for (int j = 0; j < num_pieces; j++)
+            {
+                my_colors[i].second += estado.distanceToGoal(c,j);
+                op_colors[i].second += estado.distanceToGoal(c_op,j);
+            }
+
+                
+        }
+
+        // si se cumple es porque el colo 0 es va mejor en la partida que el 1
+        if( my_colors[0].second <  my_colors[1].second)
+        {// Para jugador
+            color_ganador_jugador = my_colors[0].first;
+            color_perdedor_jugador = my_colors[1].first; 
+        }
+        else
+        {
+            color_ganador_jugador = my_colors[1].first;
+            color_perdedor_jugador = my_colors[0].first; 
+        }
+            
+        if( op_colors[0].second <  op_colors[1].second)
+        {// Para oponente
+            color_ganador_oponente = op_colors[0].first;
+            color_perdedor_oponente = op_colors[1].first; 
+        }
+        else
+        {
+            color_ganador_oponente = op_colors[1].first;
+            color_perdedor_oponente = op_colors[0].first; 
+        }
+//-----------------------------------------------Contabilizamos los puntos para el color del jugador color ganador----------------------------------------------------------
+
+    
+        for(int p = 0;p<num_pieces;p++)
+        {
+            if(estado.getBoard().getPiece(color_ganador_jugador, p).type == goal)
+                puntuacion_jugador+=12;
+            else if(estado.getBoard().getPiece(color_ganador_jugador, p).type == final_queue)
+                puntuacion_jugador+=8;
+            else if (estado.getBoard().getPiece(color_ganador_jugador, p).type != home)
+                puntuacion_jugador+=7;
+            
+            puntuacion_jugador+= (71-estado.distanceToGoal(color_ganador_jugador, p)) /5;
+        }
+
+        // comprobamos si amenazamos a alguna ficha enemiga
+        for (int fichas_mias = 0; fichas_mias < num_pieces; fichas_mias++)
+        {
+            // Recorro las fichas de ese color.
+            for (int fichas_oponentes = 0; fichas_oponentes < num_pieces; fichas_oponentes++)
+            {
+                // comprobamos si fichas de nuetro ganador amenazan a su ganador
+                if(estado.distanceBoxtoBox(color_ganador_jugador,fichas_mias, color_ganador_oponente, fichas_oponentes) != -1 && estado.distanceBoxtoBox(color_ganador_jugador,fichas_mias, color_ganador_oponente, fichas_oponentes) <= 6)
+                    puntuacion_jugador+=0.5;
+
+                // comprobamos si fichas de nuetro ganador amenazan a su perdedor
+                if(estado.distanceBoxtoBox(color_ganador_jugador,fichas_mias, color_perdedor_oponente, fichas_oponentes) != -1 && estado.distanceBoxtoBox(color_ganador_jugador,fichas_mias, color_perdedor_oponente, fichas_oponentes) <= 6)
+                    puntuacion_jugador+=0.15;
+                
+                // comprobamos si fichas de nuetro perdedor amenazan a su ganador
+                if(estado.distanceBoxtoBox(color_perdedor_jugador,fichas_mias, color_ganador_oponente, fichas_oponentes) != -1 && estado.distanceBoxtoBox(color_perdedor_jugador,fichas_mias, color_ganador_oponente, fichas_oponentes) <= 6)
+                    puntuacion_jugador+=0.5;
+
+                // comprobamos si fichas de nuetro perdedor amenazan a su perdedor
+                if(estado.distanceBoxtoBox(color_perdedor_jugador,fichas_mias, color_perdedor_oponente, fichas_oponentes) != -1 && estado.distanceBoxtoBox(color_perdedor_jugador,fichas_mias, color_perdedor_oponente, fichas_oponentes) <= 6)
+                    puntuacion_jugador+=0.05;
+            }
+        }
+            
+
+
+        if(estado.eatenPiece().first == color_ganador_oponente)
+            puntuacion_jugador+=11;
+        
+        if(estado.eatenPiece().first == color_perdedor_oponente)
+            puntuacion_jugador+=6;
+
+//-----------------------------------------------Contabilizamos los puntos para el color del jugador color perdedor----------------------------------------------------------
+
+//-----------------------------------------------Contabilizamos los puntos para el color del oponente color ganador----------------------------------------------------------
+
+        for(int p = 0;p<num_pieces;p++)
+        {
+            if(estado.getBoard().getPiece(color_ganador_oponente, p).type == goal)
+                puntuacion_oponente+=12;
+            else if(estado.getBoard().getPiece(color_ganador_oponente, p).type == final_queue)
+                puntuacion_oponente+=8;
+            else if (estado.getBoard().getPiece(color_ganador_oponente, p).type != home)
+                puntuacion_oponente+=7;
+
+            puntuacion_oponente+= (71-estado.distanceToGoal(color_ganador_oponente, p)) /5;
+        }
+
+        // comprobamos si amenazamos a alguna ficha enemiga
+        for (int fichas_mias = 0; fichas_mias < num_pieces; fichas_mias++)
+        {
+            // Recorro las fichas de ese color.
+            for (int fichas_oponentes = 0; fichas_oponentes < num_pieces; fichas_oponentes++)
+            {
+                // comprobamos si fichas su ganador amenaza a mi ganador
+                if(estado.distanceBoxtoBox(color_ganador_oponente, fichas_oponentes,color_ganador_jugador,fichas_mias) != -1 && estado.distanceBoxtoBox(color_ganador_oponente, fichas_oponentes,color_ganador_jugador,fichas_mias) <= 6)
+                    puntuacion_oponente+=0.5;
+
+                // comprobamos si fichas de su perdedor amenaza a mi ganador
+                if(estado.distanceBoxtoBox(color_perdedor_oponente, fichas_oponentes,color_ganador_jugador,fichas_mias) != -1 && estado.distanceBoxtoBox(color_perdedor_oponente, fichas_oponentes,color_ganador_jugador,fichas_mias) <= 6)
+                    puntuacion_oponente+=0.5;
+                
+                // comprobamos si fichas de su ganador amenaza a mi perdedor
+                if(estado.distanceBoxtoBox(color_ganador_oponente, fichas_oponentes,color_perdedor_jugador,fichas_mias) != -1 && estado.distanceBoxtoBox(color_ganador_oponente, fichas_oponentes,color_perdedor_jugador,fichas_mias) <= 6)
+                    puntuacion_oponente+=0.15;
+
+                // comprobamos si fichas de su perdedor asmenaza a mi perdedor
+                if(estado.distanceBoxtoBox(color_perdedor_oponente, fichas_oponentes,color_perdedor_jugador,fichas_mias) != -1 && estado.distanceBoxtoBox(color_perdedor_oponente, fichas_oponentes,color_perdedor_jugador,fichas_mias) <= 6)
+                    puntuacion_oponente+=0.05;
+            }
+        }
+
+
+
+        if(estado.eatenPiece().first == color_ganador_jugador)
+            puntuacion_oponente+=11;
+        
+        if(estado.eatenPiece().first == color_perdedor_jugador)
+            puntuacion_oponente+=6;
+//-----------------------------------------------Contabilizamos los puntos para el color del oponente color perdedor----------------------------------------------------------
+       
+        // Devuelvo la puntuación de mi jugador menos la puntuación del oponente.
+        return puntuacion_jugador - puntuacion_oponente;
+    }
+}
+
+
+// Con esta nueva heurisitica ademas de comprobar lo de la tercera
+// pero ahora tenemos en cuenta que a la hora de amenazar o que nos amenacen 
+// no estemos en casillas safe y si estamos en casillas safe a secas
+double AIPlayer::Heuristica_CUATRO(const Parchis &estado, int jugador)
+{
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------
+    int ganador = estado.getWinner();
+    int oponente = (jugador + 1) % 2;
+
+    // Si hay un ganador, devuelvo más/menos infinito, según si he ganado yo o el oponente.
+    if (ganador == jugador)
+    {
+        return gana;
+    }
+    else if (ganador == oponente)
+    {
+        return pierde;
+    }
+    else
+    {
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------
+        // Puntuaciones asignadas a cada jugador en este estado del juego
+        double puntuacion_jugador = 0;
+        double puntuacion_oponente = 0;
+
+//----------------------------------------Aqui vamos a asignar que color va ganando por cada jugador---------------------------------------------
+
+        // Colores que juega mi jugador y colores del oponente
+        vector<pair<color,int>> my_colors; 
+            // añadimos los colores del jugador, con el valor inicial que es 0 (que sera el total de casillas que les queda por recorrer para ganar)
+            my_colors.push_back(make_pair(estado.getPlayerColors(jugador).at(0),0));
+            my_colors.push_back(make_pair(estado.getPlayerColors(jugador).at(1),0));
+
+        // Colores que juega mi jugador y colores del oponente
+        vector<pair<color,int>> op_colors; 
+            // añadimos los colores del jugador, con el valor inicial que es 0
+            op_colors.push_back(make_pair(estado.getPlayerColors(oponente).at(0),0));
+            op_colors.push_back(make_pair(estado.getPlayerColors(oponente).at(1),0));
+
+        // colores auxiliares para poder medir que color va ganando para cada jugador
+        color color_ganador_jugador,
+                color_perdedor_jugador,
+              color_ganador_oponente,
+                color_perdedor_oponente;
+
+        // Calculamos cual de los dos colores de cada  jugador y oponente va ganando 
+        // Para ello vamos a calcular los puntos de cada color por jugador
+
+        for (int i = 0; i < my_colors.size(); i++)
+        {
+            color c = my_colors[i].first;
+            color c_op = op_colors[i].first;
+
+            for (int j = 0; j < num_pieces; j++)
+            {
+                my_colors[i].second += estado.distanceToGoal(c,j);
+                op_colors[i].second += estado.distanceToGoal(c_op,j);
+            }
+
+                
+        }
+
+        // si se cumple es porque el colo 0 es va mejor en la partida que el 1
+        if( my_colors[0].second <  my_colors[1].second)
+        {// Para jugador
+            color_ganador_jugador = my_colors[0].first;
+            color_perdedor_jugador = my_colors[1].first; 
+        }
+        else
+        {
+            color_ganador_jugador = my_colors[1].first;
+            color_perdedor_jugador = my_colors[0].first; 
+        }
+            
+        if( op_colors[0].second <  op_colors[1].second)
+        {// Para oponente
+            color_ganador_oponente = op_colors[0].first;
+            color_perdedor_oponente = op_colors[1].first; 
+        }
+        else
+        {
+            color_ganador_oponente = op_colors[1].first;
+            color_perdedor_oponente = op_colors[0].first; 
+        }
+//-----------------------------------------------Contabilizamos los puntos para el color del jugador color ganador----------------------------------------------------------
+
+    
+        for(int p = 0;p<num_pieces;p++)
+        {
+            if(estado.getBoard().getPiece(color_ganador_jugador, p).type == goal)
+                puntuacion_jugador+=18;
+            else if(estado.getBoard().getPiece(color_ganador_jugador, p).type == final_queue)
+                puntuacion_jugador+=8;
+            else if (estado.getBoard().getPiece(color_ganador_jugador, p).type != home)
+                puntuacion_jugador+=3;
+            if(estado.isSafePiece(color_ganador_jugador,p))
+                puntuacion_jugador+=2;
+
+            puntuacion_jugador+= (71-estado.distanceToGoal(color_ganador_jugador, p)) /3;
+        }
+
+        // comprobamos si amenazamos a alguna ficha enemiga
+        for (int fichas_mias = 0; fichas_mias < num_pieces; fichas_mias++)
+        {
+            // Recorro las fichas de ese color.
+            for (int fichas_oponentes = 0; fichas_oponentes < num_pieces; fichas_oponentes++)
+            {
+                // comprobamos si fichas de nuetro ganador amenazan a su ganador
+                if(estado.distanceBoxtoBox(color_ganador_jugador,fichas_mias, color_ganador_oponente, fichas_oponentes) != -1 && estado.distanceBoxtoBox(color_ganador_jugador,fichas_mias, color_ganador_oponente, fichas_oponentes) <= 6 && !estado.isSafePiece(color_ganador_oponente, fichas_oponentes))
+                    puntuacion_jugador++;
+
+                // comprobamos si fichas de nuetro ganador amenazan a su perdedor
+                if(estado.distanceBoxtoBox(color_ganador_jugador,fichas_mias, color_perdedor_oponente, fichas_oponentes) != -1 && estado.distanceBoxtoBox(color_ganador_jugador,fichas_mias, color_perdedor_oponente, fichas_oponentes) <= 6 && !estado.isSafePiece(color_perdedor_oponente, fichas_oponentes))
+                    puntuacion_jugador+=0.15;
+                
+                // comprobamos si fichas de nuetro perdedor amenazan a su ganador
+                if(estado.distanceBoxtoBox(color_perdedor_jugador,fichas_mias, color_ganador_oponente, fichas_oponentes) != -1 && estado.distanceBoxtoBox(color_perdedor_jugador,fichas_mias, color_ganador_oponente, fichas_oponentes) <= 6 && !estado.isSafePiece(color_ganador_oponente, fichas_oponentes))
+                    puntuacion_jugador++;
+
+                // comprobamos si fichas de nuetro perdedor amenazan a su perdedor
+                if(estado.distanceBoxtoBox(color_perdedor_jugador,fichas_mias, color_perdedor_oponente, fichas_oponentes) != -1 && estado.distanceBoxtoBox(color_perdedor_jugador,fichas_mias, color_perdedor_oponente, fichas_oponentes) <= 6 && !estado.isSafePiece(color_perdedor_oponente, fichas_oponentes))
+                    puntuacion_jugador+=0.05;
+            }
+        }
+            
+
+
+        if(estado.eatenPiece().first == color_ganador_oponente)
+            puntuacion_jugador+=16;
+        
+        if(estado.eatenPiece().first == color_perdedor_oponente)
+            puntuacion_jugador+=6;
+
+//-----------------------------------------------Contabilizamos los puntos para el color del jugador color perdedor----------------------------------------------------------
+
+//-----------------------------------------------Contabilizamos los puntos para el color del oponente color ganador----------------------------------------------------------
+
+        for(int p = 0;p<num_pieces;p++)
+        {
+            if(estado.getBoard().getPiece(color_ganador_oponente, p).type == goal)
+                puntuacion_oponente+=18;
+            else if(estado.getBoard().getPiece(color_ganador_oponente, p).type == final_queue)
+                puntuacion_oponente+=8;
+            else if (estado.getBoard().getPiece(color_ganador_oponente, p).type != home)
+                puntuacion_oponente+=3;
+            
+            if(estado.isSafePiece(color_ganador_oponente,p))
+                puntuacion_oponente+=2;
+
+            puntuacion_oponente+= (71-estado.distanceToGoal(color_ganador_oponente, p)) /3;
+        }
+
+        // comprobamos si amenazamos a alguna ficha enemiga
+        for (int fichas_mias = 0; fichas_mias < num_pieces; fichas_mias++)
+        {
+            // Recorro las fichas de ese color.
+            for (int fichas_oponentes = 0; fichas_oponentes < num_pieces; fichas_oponentes++)
+            {
+                // comprobamos si fichas su ganador amenaza a mi ganador
+                if(estado.distanceBoxtoBox(color_ganador_oponente, fichas_oponentes,color_ganador_jugador,fichas_mias) != -1 && estado.distanceBoxtoBox(color_ganador_oponente, fichas_oponentes,color_ganador_jugador,fichas_mias) <= 6 && !estado.isSafePiece(color_ganador_jugador,fichas_mias))
+                    puntuacion_oponente++;
+
+                // comprobamos si fichas de su perdedor amenaza a mi ganador
+                if(estado.distanceBoxtoBox(color_perdedor_oponente, fichas_oponentes,color_ganador_jugador,fichas_mias) != -1 && estado.distanceBoxtoBox(color_perdedor_oponente, fichas_oponentes,color_ganador_jugador,fichas_mias) <= 6 && !estado.isSafePiece(color_ganador_jugador,fichas_mias))
+                    puntuacion_oponente++;
+                
+                // comprobamos si fichas de su ganador amenaza a mi perdedor
+                if(estado.distanceBoxtoBox(color_ganador_oponente, fichas_oponentes,color_perdedor_jugador,fichas_mias) != -1 && estado.distanceBoxtoBox(color_ganador_oponente, fichas_oponentes,color_perdedor_jugador,fichas_mias) <= 6 && !estado.isSafePiece(color_perdedor_jugador,fichas_mias))
+                    puntuacion_oponente+=0.15;
+
+                // comprobamos si fichas de su perdedor asmenaza a mi perdedor
+                if(estado.distanceBoxtoBox(color_perdedor_oponente, fichas_oponentes,color_perdedor_jugador,fichas_mias) != -1 && estado.distanceBoxtoBox(color_perdedor_oponente, fichas_oponentes,color_perdedor_jugador,fichas_mias) <= 6 && !estado.isSafePiece(color_perdedor_jugador,fichas_mias))
+                    puntuacion_oponente+=0.05;
+            }
+        }
+
+
+
+        if(estado.eatenPiece().first == color_ganador_jugador)
+            puntuacion_oponente+=16;
+        
+        if(estado.eatenPiece().first == color_perdedor_jugador)
+            puntuacion_oponente+=6;
+//-----------------------------------------------Contabilizamos los puntos para el color del oponente color perdedor----------------------------------------------------------
+       
+        // Devuelvo la puntuación de mi jugador menos la puntuación del oponente.
+        return puntuacion_jugador - puntuacion_oponente;
+    }
+}
+
+
 
 
 

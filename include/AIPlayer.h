@@ -69,6 +69,10 @@ class AIPlayer: public Player{
 
         static double Heuristica_DOS(const Parchis &estado, int jugador);
 
+        static double Heuristica_TRES(const Parchis &estado, int jugador);
+
+        static double Heuristica_CUATRO(const Parchis &estado, int jugador);
+
         /**
          * @brief Método que determina si el player es inteligente (decide el mejor movimiento)
          * o no. True para AIPlayer.
