@@ -821,7 +821,7 @@ double AIPlayer::Heuristica_CUATRO(const Parchis &estado, int jugador)
         if(estado.eatenPiece().first == color_ganador_oponente)
             puntuacion_jugador+=20;
         
-        if(estado.eatenPiece().first == color_perdedor_oponente)
+        if(estado.eatenPiece().first == color_perdedor_oponente && (( estado.getCurrentColor() != my_colors.at(0).first) && ( estado.getCurrentColor() != my_colors.at(1).first)) )// solo si la que me la he comido yo
             puntuacion_jugador+=15;
 
 //-----------------------------------------------Contabilizamos los puntos para el color del jugador color perdedor----------------------------------------------------------
@@ -873,7 +873,7 @@ double AIPlayer::Heuristica_CUATRO(const Parchis &estado, int jugador)
         if(estado.eatenPiece().first == color_ganador_jugador)
             puntuacion_oponente+=20;
         
-        if(estado.eatenPiece().first == color_perdedor_jugador)
+        if(estado.eatenPiece().first == color_perdedor_jugador && (( estado.getCurrentColor() != op_colors.at(0).first) && ( estado.getCurrentColor() != op_colors.at(1).first))) // solo si se la he comido yo
             puntuacion_oponente+=10;
 //-----------------------------------------------Contabilizamos los puntos para el color del oponente color perdedor----------------------------------------------------------
        
