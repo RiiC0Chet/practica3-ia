@@ -785,9 +785,9 @@ double AIPlayer::Heuristica_CUATRO(const Parchis &estado, int jugador)
             else if(estado.getBoard().getPiece(color_ganador_jugador, p).type == final_queue)
                 puntuacion_jugador+=8;
             else if (estado.getBoard().getPiece(color_ganador_jugador, p).type != home)
-                puntuacion_jugador+=3;
+                puntuacion_jugador+=5;
             if(estado.isSafePiece(color_ganador_jugador,p))
-                puntuacion_jugador+=2;
+                puntuacion_jugador+=4;
 
             puntuacion_jugador+= (71-estado.distanceToGoal(color_ganador_jugador, p)) /3;
         }
@@ -800,15 +800,15 @@ double AIPlayer::Heuristica_CUATRO(const Parchis &estado, int jugador)
             {
                 // comprobamos si fichas de nuetro ganador amenazan a su ganador
                 if(estado.distanceBoxtoBox(color_ganador_jugador,fichas_mias, color_ganador_oponente, fichas_oponentes) != -1 && estado.distanceBoxtoBox(color_ganador_jugador,fichas_mias, color_ganador_oponente, fichas_oponentes) <= 6 && !estado.isSafePiece(color_ganador_oponente, fichas_oponentes))
-                    puntuacion_jugador++;
+                    puntuacion_jugador+=2;
 
                 // comprobamos si fichas de nuetro ganador amenazan a su perdedor
                 if(estado.distanceBoxtoBox(color_ganador_jugador,fichas_mias, color_perdedor_oponente, fichas_oponentes) != -1 && estado.distanceBoxtoBox(color_ganador_jugador,fichas_mias, color_perdedor_oponente, fichas_oponentes) <= 6 && !estado.isSafePiece(color_perdedor_oponente, fichas_oponentes))
-                    puntuacion_jugador+=0.15;
+                    puntuacion_jugador+=0.5;
                 
                 // comprobamos si fichas de nuetro perdedor amenazan a su ganador
                 if(estado.distanceBoxtoBox(color_perdedor_jugador,fichas_mias, color_ganador_oponente, fichas_oponentes) != -1 && estado.distanceBoxtoBox(color_perdedor_jugador,fichas_mias, color_ganador_oponente, fichas_oponentes) <= 6 && !estado.isSafePiece(color_ganador_oponente, fichas_oponentes))
-                    puntuacion_jugador++;
+                    puntuacion_jugador+=2;
 
                 // comprobamos si fichas de nuetro perdedor amenazan a su perdedor
                 if(estado.distanceBoxtoBox(color_perdedor_jugador,fichas_mias, color_perdedor_oponente, fichas_oponentes) != -1 && estado.distanceBoxtoBox(color_perdedor_jugador,fichas_mias, color_perdedor_oponente, fichas_oponentes) <= 6 && !estado.isSafePiece(color_perdedor_oponente, fichas_oponentes))
@@ -819,10 +819,10 @@ double AIPlayer::Heuristica_CUATRO(const Parchis &estado, int jugador)
 
 
         if(estado.eatenPiece().first == color_ganador_oponente)
-            puntuacion_jugador+=16;
+            puntuacion_jugador+=20;
         
         if(estado.eatenPiece().first == color_perdedor_oponente)
-            puntuacion_jugador+=6;
+            puntuacion_jugador+=15;
 
 //-----------------------------------------------Contabilizamos los puntos para el color del jugador color perdedor----------------------------------------------------------
 
@@ -835,10 +835,10 @@ double AIPlayer::Heuristica_CUATRO(const Parchis &estado, int jugador)
             else if(estado.getBoard().getPiece(color_ganador_oponente, p).type == final_queue)
                 puntuacion_oponente+=8;
             else if (estado.getBoard().getPiece(color_ganador_oponente, p).type != home)
-                puntuacion_oponente+=3;
+                puntuacion_oponente+=5;
             
             if(estado.isSafePiece(color_ganador_oponente,p))
-                puntuacion_oponente+=2;
+                puntuacion_oponente+=4;
 
             puntuacion_oponente+= (71-estado.distanceToGoal(color_ganador_oponente, p)) /3;
         }
@@ -849,17 +849,18 @@ double AIPlayer::Heuristica_CUATRO(const Parchis &estado, int jugador)
             // Recorro las fichas de ese color.
             for (int fichas_oponentes = 0; fichas_oponentes < num_pieces; fichas_oponentes++)
             {
+               
                 // comprobamos si fichas su ganador amenaza a mi ganador
                 if(estado.distanceBoxtoBox(color_ganador_oponente, fichas_oponentes,color_ganador_jugador,fichas_mias) != -1 && estado.distanceBoxtoBox(color_ganador_oponente, fichas_oponentes,color_ganador_jugador,fichas_mias) <= 6 && !estado.isSafePiece(color_ganador_jugador,fichas_mias))
-                    puntuacion_oponente++;
+                    puntuacion_oponente+=2;
 
                 // comprobamos si fichas de su perdedor amenaza a mi ganador
                 if(estado.distanceBoxtoBox(color_perdedor_oponente, fichas_oponentes,color_ganador_jugador,fichas_mias) != -1 && estado.distanceBoxtoBox(color_perdedor_oponente, fichas_oponentes,color_ganador_jugador,fichas_mias) <= 6 && !estado.isSafePiece(color_ganador_jugador,fichas_mias))
-                    puntuacion_oponente++;
+                    puntuacion_oponente+=2;
                 
                 // comprobamos si fichas de su ganador amenaza a mi perdedor
                 if(estado.distanceBoxtoBox(color_ganador_oponente, fichas_oponentes,color_perdedor_jugador,fichas_mias) != -1 && estado.distanceBoxtoBox(color_ganador_oponente, fichas_oponentes,color_perdedor_jugador,fichas_mias) <= 6 && !estado.isSafePiece(color_perdedor_jugador,fichas_mias))
-                    puntuacion_oponente+=0.15;
+                    puntuacion_oponente+=0.5;
 
                 // comprobamos si fichas de su perdedor asmenaza a mi perdedor
                 if(estado.distanceBoxtoBox(color_perdedor_oponente, fichas_oponentes,color_perdedor_jugador,fichas_mias) != -1 && estado.distanceBoxtoBox(color_perdedor_oponente, fichas_oponentes,color_perdedor_jugador,fichas_mias) <= 6 && !estado.isSafePiece(color_perdedor_jugador,fichas_mias))
@@ -870,10 +871,10 @@ double AIPlayer::Heuristica_CUATRO(const Parchis &estado, int jugador)
 
 
         if(estado.eatenPiece().first == color_ganador_jugador)
-            puntuacion_oponente+=16;
+            puntuacion_oponente+=20;
         
         if(estado.eatenPiece().first == color_perdedor_jugador)
-            puntuacion_oponente+=6;
+            puntuacion_oponente+=10;
 //-----------------------------------------------Contabilizamos los puntos para el color del oponente color perdedor----------------------------------------------------------
        
         // Devuelvo la puntuación de mi jugador menos la puntuación del oponente.
