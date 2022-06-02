@@ -785,13 +785,13 @@ double AIPlayer::Heuristica_CUATRO(const Parchis &estado, int jugador)
             else if(estado.getBoard().getPiece(color_ganador_jugador, p).type == final_queue)
                 puntuacion_jugador+=8;
             else if (estado.getBoard().getPiece(color_ganador_jugador, p).type != home)
-                puntuacion_jugador+=5;
+                puntuacion_jugador+=7;//7
             if(estado.isSafePiece(color_ganador_jugador,p))
-                puntuacion_jugador+=4;
+                puntuacion_jugador+=5;//5
 
             puntuacion_jugador+= (71-estado.distanceToGoal(color_ganador_jugador, p)) /2;
         }
-
+        
         // comprobamos si amenazamos a alguna ficha enemiga
         for (int fichas_mias = 0; fichas_mias < num_pieces; fichas_mias++)
         {
@@ -804,7 +804,7 @@ double AIPlayer::Heuristica_CUATRO(const Parchis &estado, int jugador)
 
                 // comprobamos si fichas de nuetro ganador amenazan a su perdedor
                 if(estado.distanceBoxtoBox(color_ganador_jugador,fichas_mias, color_perdedor_oponente, fichas_oponentes) != -1 && estado.distanceBoxtoBox(color_ganador_jugador,fichas_mias, color_perdedor_oponente, fichas_oponentes) <= 6 && !estado.isSafePiece(color_perdedor_oponente, fichas_oponentes) && estado.getBoard().getPiece(color_perdedor_oponente, fichas_oponentes).type != home)
-                    puntuacion_jugador+=0.5;
+                    puntuacion_jugador+=2;
                 
                 // comprobamos si fichas de nuetro perdedor amenazan a su ganador
                 if(estado.distanceBoxtoBox(color_perdedor_jugador,fichas_mias, color_ganador_oponente, fichas_oponentes) != -1 && estado.distanceBoxtoBox(color_perdedor_jugador,fichas_mias, color_ganador_oponente, fichas_oponentes) <= 6 && !estado.isSafePiece(color_ganador_oponente, fichas_oponentes) && estado.getBoard().getPiece(color_ganador_oponente, fichas_oponentes).type != home)
@@ -817,12 +817,12 @@ double AIPlayer::Heuristica_CUATRO(const Parchis &estado, int jugador)
         }
             
 
-
+        
         if(estado.eatenPiece().first == color_ganador_oponente)
-            puntuacion_jugador+=20;
+            puntuacion_jugador+=22;
         
         if(estado.eatenPiece().first == color_perdedor_oponente && (( estado.getCurrentColor() != my_colors.at(0).first) && ( estado.getCurrentColor() != my_colors.at(1).first)) )// solo si la que me la he comido yo
-            puntuacion_jugador+=15;
+            puntuacion_jugador+=17;
 
 //-----------------------------------------------Contabilizamos los puntos para el color del jugador color perdedor----------------------------------------------------------
 
@@ -835,14 +835,15 @@ double AIPlayer::Heuristica_CUATRO(const Parchis &estado, int jugador)
             else if(estado.getBoard().getPiece(color_ganador_oponente, p).type == final_queue)
                 puntuacion_oponente+=8;
             else if (estado.getBoard().getPiece(color_ganador_oponente, p).type != home)
-                puntuacion_oponente+=5;
+                puntuacion_oponente+=7;
             
             if(estado.isSafePiece(color_ganador_oponente,p))
-                puntuacion_oponente+=4;
+                puntuacion_oponente+=5;
 
             puntuacion_oponente+= (71-estado.distanceToGoal(color_ganador_oponente, p)) /2;
         }
 
+        
         // comprobamos si amenazamos a alguna ficha enemiga
         for (int fichas_mias = 0; fichas_mias < num_pieces; fichas_mias++)
         {
@@ -860,7 +861,7 @@ double AIPlayer::Heuristica_CUATRO(const Parchis &estado, int jugador)
                 
                 // comprobamos si fichas de su ganador amenaza a mi perdedor
                 if(estado.distanceBoxtoBox(color_ganador_oponente, fichas_oponentes,color_perdedor_jugador,fichas_mias) != -1 && estado.distanceBoxtoBox(color_ganador_oponente, fichas_oponentes,color_perdedor_jugador,fichas_mias) <= 6 && !estado.isSafePiece(color_perdedor_jugador,fichas_mias) && estado.getBoard().getPiece(color_perdedor_jugador,fichas_mias).type != home)
-                    puntuacion_oponente+=0.5;
+                    puntuacion_oponente+=2;
 
                 // comprobamos si fichas de su perdedor asmenaza a mi perdedor
                 if(estado.distanceBoxtoBox(color_perdedor_oponente, fichas_oponentes,color_perdedor_jugador,fichas_mias) != -1 && estado.distanceBoxtoBox(color_perdedor_oponente, fichas_oponentes,color_perdedor_jugador,fichas_mias) <= 6 && !estado.isSafePiece(color_perdedor_jugador,fichas_mias) && estado.getBoard().getPiece(color_perdedor_jugador,fichas_mias).type != home)
@@ -868,13 +869,13 @@ double AIPlayer::Heuristica_CUATRO(const Parchis &estado, int jugador)
             }
         }
 
-
+        
 
         if(estado.eatenPiece().first == color_ganador_jugador)
-            puntuacion_oponente+=20;
+            puntuacion_oponente+=22;
         
         if(estado.eatenPiece().first == color_perdedor_jugador && (( estado.getCurrentColor() != op_colors.at(0).first) && ( estado.getCurrentColor() != op_colors.at(1).first))) // solo si se la he comido yo
-            puntuacion_oponente+=15;
+            puntuacion_oponente+=17;
 //-----------------------------------------------Contabilizamos los puntos para el color del oponente color perdedor----------------------------------------------------------
        
         // Devuelvo la puntuación de mi jugador menos la puntuación del oponente.
